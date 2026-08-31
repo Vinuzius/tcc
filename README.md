@@ -50,6 +50,32 @@ No Linux ou macOS:
 uvicorn main:app --reload --app-dir src
 ```
 
+## Exemplo do endpoint
+
+`POST /first-example/query`
+
+Headers:
+
+```http
+X-Profile-Name: A
+Content-Type: application/json
+```
+
+Body:
+
+```json
+{
+  "sql": "SELECT name, city FROM people"
+}
+```
+
+Limitações do comportamento:
+
+- Apenas consultas read-only são aceitas.
+- O SQL deve começar com `SELECT` ou `WITH`.
+- O endpoint rejeita `INSERT`, `UPDATE`, `DELETE`, `ALTER`, `DROP` e outras mutações.
+- O retorno é transformado pelo perfil informado no header.
+
 ## Health check
 
 Depois de subir a aplicação, acesse `GET /health`.
