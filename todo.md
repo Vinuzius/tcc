@@ -1,0 +1,5 @@
+- adicioanar perfis lgpd
+- verificar wire comunication
+- criar banco de dados para user/profile
+- proteção contra sqls indesejados
+- melhor forma de inserir o sql

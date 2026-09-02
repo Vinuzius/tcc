@@ -22,10 +22,10 @@ class QueryRequest(BaseModel):
         ],
     )
 
-
+# Aceita apenas Select e With
 def validate_read_only_sql(sql: str) -> None:
     normalized_sql = sql.lstrip().upper()
-    if not (normalized_sql.startswith("SELECT") or normalized_sql.startswith("WITH")):
+    if not normalized_sql.startswith(("SELECT", "WITH")):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Only read-only SQL statements starting with SELECT or WITH are allowed.",
