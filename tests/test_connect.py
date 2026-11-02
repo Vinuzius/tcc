@@ -1,4 +1,4 @@
-from publisher.database.connection import get_connection
+from database.connection import get_connection
 
 
 def test_postgres_connection():
