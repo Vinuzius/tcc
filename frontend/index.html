@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TCC • Sistema de Consultas & Perfis de Privacidade</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="header-content">
+      <div class="brand">
+        <div class="brand-icon">🛡️</div>
+        <div>
+          <h1 class="brand-title">TCC • Consultas & Privacidade</h1>
+          <p class="brand-subtitle">Autenticação OAuth 2.0 • CRUD de Usuários • Perfis de Privacidade</p>
+        </div>
+      </div>
+
+      <!-- User Session Pill & Actions (Visible when logged in) -->
+      <div id="user-session" class="user-session hidden">
+        <div class="user-info-card">
+          <span class="user-avatar" id="nav-avatar">👤</span>
+          <div class="user-details">
+            <span class="user-name" id="nav-username">Usuário</span>
+            <div class="user-badges">
+              <span class="badge badge-profile" id="nav-profile-badge">Perfil: Carregando...</span>
+              <span class="badge badge-role" id="nav-role-badge">Usuário</span>
+            </div>
+          </div>
+        </div>
+        <button id="btn-logout" class="btn btn-secondary btn-sm" title="Encerrar Sessão">
+          <span class="btn-icon">🚪</span> Sair
+        </button>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs (Visible when logged in) -->
+    <nav id="app-nav" class="app-nav hidden">
+      <div class="nav-container">
+        <button class="nav-tab active" data-tab="tab-query">
+          <span class="tab-icon">🔍</span> Executar Consulta SQL
+        </button>
+        <button class="nav-tab" id="nav-tab-admin" data-tab="tab-admin" style="display: none;">
+          <span class="tab-icon">👑</span> Painel do Admin (Usuários & Perfis)
+        </button>
+        <button class="nav-tab" data-tab="tab-profiles">
+          <span class="tab-icon">📋</span> Catálogo de Perfis
+        </button>
+        <button class="nav-tab" data-tab="tab-about">
+          <span class="tab-icon">ℹ️</span> Sobre & Requisitos
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <main class="main-content">
+
+    <!-- ========================================== -->
+    <!-- VIEW: AUTHENTICATION (LOGIN & REGISTRATION) -->
+    <!-- ========================================== -->
+    <section id="auth-section" class="auth-section">
+      <div class="auth-card">
+        <div class="auth-header">
+          <div class="auth-logo">🔐</div>
+          <h2>Autenticação de Usuário</h2>
+          <p class="auth-description">Acesse o sistema com suas credenciais ou via provedor OAuth 2.0</p>
+        </div>
+
+        <!-- Auth Tabs (Login / Cadastro) -->
+        <div class="auth-tabs">
+          <button class="auth-tab-btn active" id="btn-show-login">Entrar (Login)</button>
+          <button class="auth-tab-btn" id="btn-show-register">Cadastrar-se</button>
+        </div>
+
+        <!-- Form: Login -->
+        <form id="form-login" class="auth-form active">
+          <div class="form-group">
+            <label for="login-username">Nome de Usuário (Login)</label>
+            <input type="text" id="login-username" class="form-control" placeholder="ex: admin ou joao" required autocomplete="username">
+          </div>
+          <div class="form-group">
+            <label for="login-password">Senha</label>
+            <input type="password" id="login-password" class="form-control" placeholder="Digite sua senha" required autocomplete="current-password">
+          </div>
+          <button type="submit" class="btn btn-primary btn-block" id="btn-submit-login">
+            <span class="btn-text">Entrar no Sistema</span>
+          </button>
+
+          <!-- Quick Test Credentials Pill -->
+          <div class="demo-credentials">
+            <p class="demo-title">Credenciais Rápidas de Teste:</p>
+            <div class="demo-buttons">
+              <button type="button" class="btn btn-chip" onclick="window.TCCApp.fillCredentials('admin', 'admin123')">
+                👑 <strong>admin</strong> / admin123 <span class="chip-tag">(Admin)</span>
+              </button>
+              <button type="button" class="btn btn-chip" onclick="window.TCCApp.fillCredentials('joao', 'user123')">
+                👤 <strong>joao</strong> / user123 <span class="chip-tag">(Padrão)</span>
+              </button>
+              <button type="button" class="btn btn-chip" onclick="window.TCCApp.fillCredentials('maria', 'maria123')">
+                🔬 <strong>maria</strong> / maria123 <span class="chip-tag">(Pesquisador)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Divider -->
+          <div class="auth-divider">
+            <span>OU AUTENTIQUE COM OAUTH 2.0</span>
+          </div>
+
+          <!-- OAuth 2.0 Social / Single-Sign-On -->
+          <div class="oauth-buttons">
+            <button type="button" class="btn btn-oauth btn-oauth-google" onclick="window.TCCApp.loginOAuth('google')">
+              <svg class="oauth-icon" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z"/><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/><path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3 0-.8.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15.2c0 2.8.7 5.5 1.9 7.8l3.7-2.9z"/><path fill="#34A853" d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2-6.4-4.8L1.9 16.9C3.7 20.6 7.5 23.5 12 23.5z"/></svg>
+              <span>Entrar com Google (OAuth 2.0)</span>
+            </button>
+            <button type="button" class="btn btn-oauth btn-oauth-github" onclick="window.TCCApp.loginOAuth('github')">
+              <svg class="oauth-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+              <span>Entrar com GitHub (OAuth 2.0)</span>
+            </button>
+          </div>
+        </form>
+
+        <!-- Form: Register -->
+        <form id="form-register" class="auth-form">
+          <div class="form-group">
+            <label for="reg-username">Novo Nome de Usuário</label>
+            <input type="text" id="reg-username" class="form-control" placeholder="Mínimo 3 caracteres" required minlength="3">
+          </div>
+          <div class="form-group">
+            <label for="reg-password">Senha</label>
+            <input type="password" id="reg-password" class="form-control" placeholder="Mínimo 4 caracteres" required minlength="4">
+          </div>
+          <div class="form-group">
+            <label for="reg-confirm-password">Confirmar Senha</label>
+            <input type="password" id="reg-confirm-password" class="form-control" placeholder="Repita a senha" required minlength="4">
+          </div>
+
+          <!-- Business rule alert -->
+          <div class="alert alert-info">
+            <span class="alert-icon">ℹ️</span>
+            <div>
+              <strong>Regra do Sistema:</strong> Todo novo usuário é cadastrado com o perfil inicial <strong>"Padrão"</strong>.
+              <br>Apenas administradores possuem autorização para alterar perfis no sistema.
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-success btn-block" id="btn-submit-register">
+            <span class="btn-text">Confirmar Cadastro</span>
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 1: SQL QUERY RUNNER                   -->
+    <!-- ========================================== -->
+    <section id="tab-query" class="app-tab-content">
+      <div class="card">
+        <div class="card-header">
+          <div class="header-titles">
+            <h2>🔍 Executar Consulta SQL</h2>
+            <p class="card-subtitle">Insira uma instrução SQL (ex: SELECT) para consultar a base de dados:</p>
+          </div>
+          <div class="active-profile-indicator">
+            <span class="label">Perfil em Uso:</span>
+            <span class="badge badge-profile-lg" id="query-active-profile">Carregando...</span>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <!-- Sample Query Quick Buttons -->
+          <div class="query-shortcuts">
+            <span class="shortcuts-label">Exemplos rápidos:</span>
+            <div class="shortcut-pills">
+              <button type="button" class="btn-pill" onclick="window.TCCApp.setQuery('SELECT p.name FROM perfil p;')">
+                select p.name from perfil
+              </button>
+              <button type="button" class="btn-pill" onclick="window.TCCApp.setQuery('SELECT u.id, u.username, u.is_admin, p.name AS perfil FROM usuario u LEFT JOIN perfil p ON u.perfil_id = p.id;')">
+                select usuários e perfis
+              </button>
+              <button type="button" class="btn-pill" onclick="window.TCCApp.setQuery('SELECT e.education, e.city, e.payment_tier, e.age FROM employee e WHERE e.age > 25 LIMIT 10;')">
+                select employee (idade &gt; 25)
+              </button>
+              <button type="button" class="btn-pill" onclick="window.TCCApp.setQuery('SELECT 1 AS id, \'Conexão OK\' AS status, CURRENT_TIMESTAMP AS horario;')">
+                select status
+              </button>
+            </div>
+          </div>
+
+          <!-- SQL Editor / Input Area -->
+          <div class="sql-editor-container">
+            <div class="editor-header">
+              <span class="editor-lang">SQL (Read-Only)</span>
+              <span class="editor-hint">Dica: Pressione <strong>Ctrl + Enter</strong> para executar</span>
+            </div>
+            <textarea id="sql-input" class="sql-textarea" rows="5" spellcheck="false" placeholder="Digite seu comando SQL aqui... (ex: SELECT p.name FROM perfil p)">SELECT p.name FROM perfil p;</textarea>
+          </div>
+
+          <!-- Actions Bar -->
+          <div class="query-actions">
+            <button id="btn-run-query" class="btn btn-primary btn-lg">
+              <span class="btn-icon">▶</span>
+              <span class="btn-text">Executar Consulta SQL</span>
+            </button>
+            <button id="btn-clear-query" class="btn btn-secondary">
+              Limpar Campo
+            </button>
+          </div>
+
+          <!-- Error Alert Banner -->
+          <div id="query-error" class="alert alert-danger hidden">
+            <span class="alert-icon">⚠️</span>
+            <div id="query-error-text">Mensagem de erro</div>
+          </div>
+
+          <!-- Results Section -->
+          <div id="query-results-wrapper" class="results-wrapper hidden">
+            <div class="results-header">
+              <div class="results-metrics">
+                <span class="metric-item"><strong id="metric-rows">0</strong> registros</span>
+                <span class="metric-divider">•</span>
+                <span class="metric-item"><strong id="metric-cols">0</strong> colunas</span>
+                <span class="metric-divider">•</span>
+                <span class="metric-item"><strong id="metric-time">0</strong> ms</span>
+              </div>
+              <div class="results-tools">
+                <input type="text" id="filter-results" class="form-control form-control-sm" placeholder="Filtrar nesta tabela...">
+                <button id="btn-export-csv" class="btn btn-secondary btn-sm" title="Baixar resultado em CSV">
+                  📥 Exportar CSV
+                </button>
+              </div>
+            </div>
+
+            <!-- Result Table Container -->
+            <div class="table-responsive">
+              <table id="results-table" class="data-table">
+                <thead id="results-thead"></thead>
+                <tbody id="results-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div id="query-empty-state" class="empty-state">
+            <div class="empty-icon">📊</div>
+            <h3>Nenhuma consulta executada ainda</h3>
+            <p>Escreva um comando SQL acima e clique em <strong>Executar Consulta SQL</strong> para visualizar os dados retornados na tela.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 2: ADMIN PANEL (USERS & PROFILES)     -->
+    <!-- ========================================== -->
+    <section id="tab-admin" class="app-tab-content">
+      <div class="card admin-card">
+        <div class="card-header bg-admin">
+          <div>
+            <h2>👑 Painel do Administrador</h2>
+            <p class="card-subtitle">Gerenciamento de usuários cadastrados e controle de perfis de privacidade.</p>
+          </div>
+          <span class="badge badge-admin-chip">Acesso Exclusivo: Admin</span>
+        </div>
+
+        <div class="card-body">
+          <!-- User Management Table Section -->
+          <div class="admin-section">
+            <div class="section-title-bar">
+              <div>
+                <h3>Usuários Cadastrados no Sistema</h3>
+                <p class="section-subtitle">
+                  Altere o perfil de qualquer usuário utilizando a lista suspensa 
+                  <code>(select p.name from perfil)</code>
+                </p>
+              </div>
+              <button id="btn-refresh-users" class="btn btn-secondary btn-sm">
+                🔄 Recarregar Usuários
+              </button>
+            </div>
+
+            <div class="table-responsive">
+              <table class="data-table admin-users-table" id="admin-users-table">
+                <thead>
+                  <tr>
+                    <th style="width: 60px;">ID</th>
+                    <th>Nome de Usuário</th>
+                    <th>Tipo</th>
+                    <th>Perfil Atual</th>
+                    <th style="min-width: 240px;">Modificar Perfil (select p.name from perfil)</th>
+                    <th style="width: 140px; text-align: right;">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-users-tbody">
+                  <!-- Populated via JavaScript -->
+                  <tr>
+                    <td colspan="6" class="text-center py-4">Carregando usuários...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Admin: Add User Form -->
+          <div class="admin-section mt-6">
+            <h3>Cadastrar Novo Usuário como Administrador</h3>
+            <p class="section-subtitle">O administrador tem a permissão exclusiva de escolher o perfil inicial do usuário no cadastro:</p>
+            
+            <form id="form-admin-create-user" class="admin-create-user-form">
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label for="admin-new-username">Nome de Usuário (Login)</label>
+                  <input type="text" id="admin-new-username" class="form-control" placeholder="ex: beatriz" required minlength="3">
+                </div>
+                <div class="form-group flex-1">
+                  <label for="admin-new-password">Senha</label>
+                  <input type="password" id="admin-new-password" class="form-control" placeholder="Senha do usuário" required minlength="4">
+                </div>
+                <div class="form-group flex-1">
+                  <label for="admin-new-profile-select">Perfil Atribuído (select p.name from perfil)</label>
+                  <select id="admin-new-profile-select" class="form-control" required>
+                    <!-- Populated via JS -->
+                  </select>
+                </div>
+              </div>
+              <div class="form-row align-center">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="admin-new-is-admin">
+                  <span>Conceder privilégios de Administrador a este usuário</span>
+                </label>
+                <button type="submit" class="btn btn-primary">
+                  <span class="btn-icon">➕</span> Cadastrar Usuário
+                </button>
+              </div>
+            </form>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 3: PROFILES CATALOG                   -->
+    <!-- ========================================== -->
+    <section id="tab-profiles" class="app-tab-content">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>📋 Catálogo de Perfis de Privacidade</h2>
+            <p class="card-subtitle">Registros da tabela <code>perfil</code> disponíveis para aplicação de regras e restrições.</p>
+          </div>
+          <span class="badge badge-neutral" id="profiles-count-badge">0 perfis cadastrados</span>
+        </div>
+
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="data-table" id="profiles-catalog-table">
+              <thead>
+                <tr>
+                  <th style="width: 70px;">ID</th>
+                  <th>Nome do Perfil (p.name)</th>
+                  <th>Descrição & Políticas Associadas</th>
+                  <th style="width: 180px;">Data de Criação</th>
+                </tr>
+              </thead>
+              <tbody id="profiles-catalog-tbody">
+                <!-- Populated via JS -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Add profile (for admin) -->
+          <div id="admin-add-profile-container" class="mt-6" style="display: none;">
+            <h3>Criar Novo Perfil de Privacidade</h3>
+            <form id="form-create-profile" class="form-create-profile mt-3">
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label for="profile-name">Nome do Perfil</label>
+                  <input type="text" id="profile-name" class="form-control" placeholder="ex: Anonimizado_Nivel_2" required>
+                </div>
+                <div class="form-group flex-2">
+                  <label for="profile-desc">Descrição / Legislação Aplicável</label>
+                  <input type="text" id="profile-desc" class="form-control" placeholder="ex: Perfil com regras fundamentadas na LGPD art. 13">
+                </div>
+                <div class="form-group align-end">
+                  <button type="submit" class="btn btn-success">Adicionar Perfil</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 4: ABOUT & REQUIREMENTS               -->
+    <!-- ========================================== -->
+    <section id="tab-about" class="app-tab-content">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>ℹ️ Sobre o Sistema & Requisitos Atendidos</h2>
+            <p class="card-subtitle">Trabalho de Conclusão de Curso — Controle de Visibilidade e Privacidade de Dados em Consultas SQL</p>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="about-grid">
+            <div class="about-card">
+              <h4>🎯 Objetivo do Projeto</h4>
+              <p>Controlar a visibilidade e o tratamento dos dados disponibilizados aos usuários durante consultas a um banco de dados, aplicando mecanismos de proteção baseados em políticas de privacidade e legislações vigentes (LGPD, GDPR).</p>
+            </div>
+            <div class="about-card">
+              <h4>🔐 Autenticação OAuth 2.0</h4>
+              <p>Autenticação segura padrão RFC 6749 (Password Bearer Flow e simulação de Provedores OAuth 2.0 como Google e GitHub), com geração de JWTs e validação de tokens nas rotas da API.</p>
+            </div>
+            <div class="about-card">
+              <h4>👥 CRUD de Usuários & Perfis</h4>
+              <p>Cada usuário possui login, senha criptografada com <code>bcrypt</code> e um perfil de privacidade associado. <strong>Regra de ouro:</strong> Apenas o administrador possui a prerrogativa de definir e modificar o perfil dos usuários.</p>
+            </div>
+            <div class="about-card">
+              <h4>⚡ Executor de SQL & Admin</h4>
+              <p>Execução de consultas SQL read-only com feedback visual imediato em tabela responsiva. Na tela de administração, o perfil de cada usuário pode ser modificado com base no resultado dinâmico de <code>select p.name from perfil</code>.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    <div class="footer-content">
+      <p>TCC • Sistema de Controle de Privacidade em Consultas SQL &copy; 2026</p>
+      <p class="footer-links">
+        <a href="/docs" target="_blank" rel="noopener">Documentação Swagger (OpenAPI)</a>
+        <span>•</span>
+        <a href="/redoc" target="_blank" rel="noopener">ReDoc</a>
+      </p>
+    </div>
+  </footer>
+
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

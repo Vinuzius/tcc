@@ -124,6 +124,45 @@ clientes que usam o fluxo de consulta simples. Ele não substitui um servidor
 PostgreSQL completo: o exemplo não implementa prepared statements, SSL/TLS,
 transações ou tipos de resultado além de texto, inteiros e booleanos.
 
+## Aplicação Web & Frontend
+
+A aplicação conta com uma interface web completa na pasta `frontend/`, servida automaticamente na raiz:
+
+```
+http://localhost:8000
+```
+
+### Funcionalidades Implementadas:
+
+1. **Autenticação OAuth 2.0**:
+   - Padrão RFC 6749 com fluxo Password Grant (`POST /api/auth/token`).
+   - Endpoint JSON para login e cadastro (`POST /api/auth/login`, `POST /api/auth/register`).
+   - Suporte a provedores OAuth 2.0 / Single Sign-On simulado (`POST /api/auth/oauth/login`).
+   - Tokens JWT com algoritmo HMAC-SHA256 e proteção de rotas via `Bearer <token>`.
+
+2. **CRUD de Usuários & Perfis**:
+   - Cada usuário possui login, senha criptografada com `bcrypt` e um perfil de privacidade associado.
+   - **Regra do Sistema**: Apenas o administrador tem autorização para definir ou alterar o perfil dos usuários. Novos usuários auto-registrados recebem automaticamente o perfil `Padrão`.
+   - Painel administrativo (`/api/admin/users`) para listagem, cadastro, exclusão e alteração de privilégios.
+
+3. **Painel do Administrador & Modificação de Perfil**:
+   - Exibe a lista completa de usuários cadastrados.
+   - Cada linha possui um campo seletor `<select>` preenchido dinamicamente com os perfis existentes no banco (`SELECT p.name FROM perfil`).
+   - O administrador pode selecionar qualquer perfil e salvar a modificação instantaneamente.
+
+4. **Executor de Consultas SQL Read-Only**:
+   - Campo de texto para digitar consultas SQL.
+   - Exibição dinâmica dos dados retornados em tabela HTML responsiva.
+   - Métricas de execução (número de linhas, colunas e tempo em milissegundos).
+   - Filtro de resultados em tempo real e exportação para CSV.
+   - Exemplos rápidos de consulta prontos para teste (`SELECT p.name FROM perfil`, `SELECT * FROM usuario`, `SELECT * FROM employee LIMIT 10`).
+
+### Credenciais Padrão para Teste:
+
+- **Administrador**: `admin` / `admin123` (Perfil: *Administrador*)
+- **Usuário Comum**: `joao` / `user123` (Perfil: *Padrão*)
+- **Pesquisador**: `maria` / `maria123` (Perfil: *Pesquisador*)
+
 ## Health check
 
 Depois de subir a aplicação, acesse `GET /health`.

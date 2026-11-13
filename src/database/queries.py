@@ -1,9 +1,6 @@
-from typing import Any, LiteralString, cast
+from typing import Any
 
-from psycopg import sql as psycopg_sql
-from psycopg.rows import dict_row
-
-from database.connection import get_connection
+from database.db import execute_query
 
 
 def ensure_read_query(sql: str) -> str:
@@ -27,7 +24,4 @@ def ensure_read_query(sql: str) -> str:
 
 def execute_read_query(sql: str) -> list[dict[str, Any]]:
     statement = ensure_read_query(sql)
-    with get_connection() as connection:
-        with connection.cursor(row_factory=dict_row) as cursor:
-            cursor.execute(psycopg_sql.SQL(cast(LiteralString, statement)))
-            return list(cursor.fetchall())
+    return execute_query(statement)
