@@ -17,7 +17,27 @@ class EmployeeQueryHandler(Handler):
 
     port = int(os.getenv("POSTGRES_WIRE_PORT", "5433"))
 
-    def query(self, sql: str) -> list[EmployeeQueryResult]:
+    def handle_query(self, sql: bytes) -> None:
+        rows = self.query(sql)
+        if not rows:
+            self.send_row_description([])
+            self.send_row_data([])
+            self.send_command_complete(b"SELECT\x00")
+            return
+
+        self._cached_query = (sql, rows)
+        try:
+            super().handle_query(sql)
+        finally:
+            del self._cached_query
+
+    def query(self, sql: str | bytes) -> list[EmployeeQueryResult]:
+        cached_query = getattr(self, "_cached_query", None)
+        if cached_query is not None and cached_query[0] == sql:
+            return cached_query[1]
+
+        if isinstance(sql, bytes):
+            sql = sql.rstrip(b"\x00").decode("utf-8")
         rows = execute_read_query(ensure_read_query(sql))
         return [EmployeeQueryResult.model_validate(row) for row in rows]
 
