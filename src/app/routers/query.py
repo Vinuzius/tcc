@@ -1,21 +1,25 @@
 import time
 from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from app.privacy_engine import PrivacyEngine
 from app.security import get_current_user
-from database.queries import ensure_read_query
-from database.db import execute_query
+from database.connections import arani_query, source_query
 
 router = APIRouter(prefix="/api/query", tags=["Consultas SQL"])
+
+# Regras vêm do Arani; os dados vêm da fonte (somente leitura).
+engine = PrivacyEngine(arani_query=arani_query, source_query=source_query)
 
 
 class QueryRequest(BaseModel):
     sql: str = Field(
         ...,
         min_length=1,
-        description="Instrução SQL read-only a ser executada no banco de dados.",
-        examples=["SELECT p.name FROM perfil p", "SELECT * FROM employee LIMIT 5"],
+        description="Instrução SQL read-only a ser executada na fonte de dados.",
+        examples=["SELECT * FROM employee LIMIT 5"],
     )
 
 
@@ -34,8 +38,8 @@ class QueryResponse(BaseModel):
     response_model=QueryResponse,
     summary="Executar Consulta SQL Read-Only",
     description=(
-        "Executa uma instrução SQL segura (SELECT ou WITH) e retorna as colunas, "
-        "linhas retornadas e tempo de execução."
+        "Executa uma consulta SELECT/WITH na fonte de dados e aplica ao resultado "
+        "as regras de privacidade do perfil do usuário autenticado."
     ),
 )
 def run_sql_query(
@@ -45,25 +49,23 @@ def run_sql_query(
     start_time = time.perf_counter()
 
     try:
-        validated_sql = ensure_read_query(request.sql)
-        rows = execute_query(validated_sql)
-        elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
-
-        columns = list(rows[0].keys()) if rows else []
-
-        return QueryResponse(
-            sql=validated_sql,
-            columns=columns,
-            rows=rows,
-            row_count=len(rows),
-            execution_time_ms=elapsed_ms,
-            user_profile=current_user.get("perfil_name"),
-            username=current_user.get("username"),
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
+        # current_user precisa trazer "id" e "profile_id" (ver security.get_current_user)
+        result = engine.execute(current_user, request.sql)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
         raise HTTPException(
             status_code=400,
-            detail=f"Erro na execução da consulta SQL: {str(e)}",
+            detail=f"Erro na execução da consulta SQL: {exc}",
         )
+
+    elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
+    return QueryResponse(
+        sql=request.sql.strip(),
+        columns=result["columns"],
+        rows=result["rows"],
+        row_count=result["row_count"],
+        execution_time_ms=elapsed_ms,
+        user_profile=current_user.get("profile_name"),
+        username=current_user.get("username"),
+    )

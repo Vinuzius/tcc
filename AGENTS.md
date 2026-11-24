@@ -22,7 +22,7 @@ Dois bancos, sempre separados:
 
 ## Comandos (confirmar e ajustar)
 - Testes: `pytest`
-- Subir a API: `<comando usado hoje no projeto>`
+- Subir a API: `uvicorn main:app --reload --app-dir src`
 
 ## Escopo
 - Não implementar nada fora do pedido da tarefa. As prioridades estão em `todo.md` (urgente, v0, v1+).
