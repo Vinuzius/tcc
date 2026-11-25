@@ -31,7 +31,6 @@ def init_database() -> None:
     execute_mutation(
         """
         CREATE TABLE IF NOT EXISTS public.employee (
-            id SERIAL PRIMARY KEY,
             education VARCHAR(50),
             joining_year INTEGER,
             city VARCHAR(100),
@@ -44,6 +43,7 @@ def init_database() -> None:
         )
         """
     )
+    execute_mutation("ALTER TABLE public.employee DROP COLUMN IF EXISTS id")
 
     employees = execute_query("SELECT 1 FROM public.employee LIMIT 1")
     csv_path = ROOT_DIR / "docs" / "Example_Table_Employee.csv"

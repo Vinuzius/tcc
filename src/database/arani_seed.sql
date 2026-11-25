@@ -57,13 +57,19 @@ INSERT INTO data_column (data_table_id, name, data_type)
 SELECT t.id, c.name, c.data_type
 FROM data_table t
 CROSS JOIN (VALUES
-    ('id', 'integer'), ('education', 'varchar'), ('joining_year', 'integer'),
+    ('education', 'varchar'), ('joining_year', 'integer'),
     ('city', 'varchar'), ('payment_tier', 'integer'), ('age', 'integer'),
     ('gender', 'varchar'), ('ever_benched', 'varchar'),
     ('experience_in_current_domain', 'integer'), ('leave_or_not', 'integer')
 ) AS c(name, data_type)
 WHERE t.name = 'employee'
 ON CONFLICT (data_table_id, name) DO NOTHING;
+
+DELETE FROM data_column dc
+USING data_table t
+WHERE dc.data_table_id = t.id
+  AND t.name = 'employee'
+  AND dc.name = 'id';
 
 -- Conjuntos de colunas alvo das regras
 INSERT INTO attribute_set (name, description) VALUES
@@ -93,9 +99,6 @@ FROM (VALUES ('A', 'employee_city', 'UPPER'), ('B', 'employee_education', 'HIDE_
 JOIN profile p       ON p.name = v.profile_name
 JOIN attribute_set s ON s.name = v.set_name
 JOIN algorithm a     ON a.name = v.algorithm_name
-WHERE NOT EXISTS (
-    SELECT 1 FROM profile_rule pr
-    WHERE pr.profile_id = p.id AND pr.attribute_set_id = s.id AND pr.algorithm_id = a.id
-);
+ON CONFLICT DO NOTHING;
 
 COMMIT;

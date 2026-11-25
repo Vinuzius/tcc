@@ -224,10 +224,36 @@ CREATE TABLE IF NOT EXISTS profile_rule (
     params              JSONB NOT NULL DEFAULT '{}'::jsonb,   -- a ordem das etapas é definida pela API (ver execution_step.sequence)
 
     PRIMARY KEY (id),
+    UNIQUE (profile_id, attribute_set_id, algorithm_id),
     FOREIGN KEY (profile_id) REFERENCES profile (id) ON DELETE CASCADE,
     FOREIGN KEY (attribute_set_id) REFERENCES attribute_set (id) ON DELETE CASCADE,
     FOREIGN KEY (algorithm_id) REFERENCES algorithm (id) ON DELETE RESTRICT
 );
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint c
+        JOIN pg_class t ON t.oid = c.conrelid
+        JOIN pg_namespace n ON n.oid = t.relnamespace
+        WHERE n.nspname = 'arani'
+          AND t.relname = 'profile_rule'
+          AND c.contype = 'u'
+          AND c.conkey = ARRAY(
+              SELECT a.attnum
+              FROM pg_attribute a
+              WHERE a.attrelid = t.oid
+                AND a.attname IN ('profile_id', 'attribute_set_id', 'algorithm_id')
+              ORDER BY array_position(ARRAY['profile_id', 'attribute_set_id', 'algorithm_id']::name[], a.attname)
+          )
+    ) THEN
+        ALTER TABLE arani.profile_rule
+            ADD CONSTRAINT uq_profile_rule_profile_set_algorithm
+            UNIQUE (profile_id, attribute_set_id, algorithm_id);
+    END IF;
+END
+$$;
 
 -- O perfil sempre segue a regulação: a regra só é aceita se a garantia do algoritmo
 -- satisfizer CADA classificação (regulação e perfil) do conjunto alvo.

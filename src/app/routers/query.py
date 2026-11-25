@@ -28,6 +28,7 @@ class QueryResponse(BaseModel):
     columns: list[str]
     rows: list[dict[str, Any]]
     row_count: int
+    truncated: bool = False
     execution_time_ms: float
     user_profile: str | None = None
     username: str | None = None
@@ -53,6 +54,8 @@ def run_sql_query(
         result = engine.execute(current_user, request.sql)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
     except Exception as exc:
         raise HTTPException(
             status_code=400,
@@ -65,6 +68,7 @@ def run_sql_query(
         columns=result["columns"],
         rows=result["rows"],
         row_count=result["row_count"],
+        truncated=result["truncated"],
         execution_time_ms=elapsed_ms,
         user_profile=current_user.get("profile_name"),
         username=current_user.get("username"),

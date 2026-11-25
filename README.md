@@ -93,10 +93,12 @@ curl -s -X POST http://localhost:8000/api/query \
 # Resultado: coluna "education" removida de columns e rows; city com valor original.
 ```
 
-Limitações do comportamento:
+### Limitações conhecidas
 
 - Apenas consultas read-only são aceitas (`SELECT` ou `WITH`).
 - As consultas executam em transação `READ ONLY` com o papel `source_reader` sem acesso ao schema `arani`.
+- O servidor PostgreSQL wire (`src/postgres_wire_server.py`) ainda devolve dados sem aplicar as regras da `PrivacyEngine`.
+- Cláusulas `WHERE`, `ORDER BY` e `GROUP BY` sobre colunas ocultas ainda permitem inferência (tratado na v1+).
 
 ## Servidor PostgreSQL wire
 

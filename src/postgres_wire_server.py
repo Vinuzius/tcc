@@ -44,9 +44,11 @@ class EmployeeQueryHandler(Handler):
     def check_auth(self, user: str, password: str) -> None:
         configured_user = os.getenv("POSTGRES_WIRE_USER")
         configured_password = os.getenv("POSTGRES_WIRE_PASSWORD")
-        if configured_user and user != configured_user:
+        if not configured_user or not configured_password:
+            raise ValueError("PostgreSQL wire credentials are not configured")
+        if user != configured_user:
             raise ValueError("Invalid PostgreSQL wire username")
-        if configured_password and password != configured_password:
+        if password != configured_password:
             raise ValueError("Invalid PostgreSQL wire password")
 
 

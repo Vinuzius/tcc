@@ -42,12 +42,30 @@ def get_source_connection() -> psycopg.Connection:
     return _connect("SOURCE_DB", default_schema="public", read_only=True)
 
 
-def _fetch(conn: psycopg.Connection, sql: str, params: tuple | list | None) -> list[dict[str, Any]]:
+def get_query_max_rows() -> int:
+    raw = os.getenv("QUERY_MAX_ROWS", "1000")
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise ValueError(f"Invalid QUERY_MAX_ROWS: {raw}") from exc
+    if value <= 0:
+        raise ValueError("QUERY_MAX_ROWS must be positive")
+    return value
+
+
+def _fetch(
+    conn: psycopg.Connection,
+    sql: str,
+    params: tuple | list | None,
+    max_rows: int | None = None,
+) -> list[dict[str, Any]]:
     # params=None (e não ()) mantém o '%' do SQL do usuário (ex.: LIKE 'A%') sem interpretação
     with conn.cursor(row_factory=dict_row) as cur:
         cur.execute(sql, params)
         if cur.description is None:
             return []
+        if max_rows is not None:
+            return list(cur.fetchmany(max_rows))
         return list(cur.fetchall())
 
 
@@ -65,10 +83,15 @@ def arani_mutation(sql: str, params: tuple | list | None = None) -> int:
             return cur.rowcount
 
 
-def source_query(sql: str, params: tuple | list | None = None) -> list[dict[str, Any]]:
+def source_query(
+    sql: str,
+    params: tuple | list | None = None,
+    max_rows: int | None = None,
+) -> list[dict[str, Any]]:
     """Executa SQL na fonte de dados, em transação READ ONLY e com o papel restrito."""
+    limit = get_query_max_rows() if max_rows is None else max_rows
     with get_source_connection() as conn:
-        return _fetch(conn, sql, params)
+        return _fetch(conn, sql, params, max_rows=limit)
 
 
 def run_arani_script(path: Path) -> None:
