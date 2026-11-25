@@ -181,11 +181,11 @@
           <div class="query-shortcuts">
             <span class="shortcuts-label">Exemplos rápidos:</span>
             <div class="shortcut-pills">
-              <button type="button" class="btn-pill" onclick="window.TCCApp.setQuery('SELECT p.name FROM perfil p;')">
-                select p.name from perfil
+              <button type="button" class="btn-pill" onclick="window.TCCApp.setQuery('SELECT * FROM employee LIMIT 10;')">
+                select * from employee
               </button>
-              <button type="button" class="btn-pill" onclick="window.TCCApp.setQuery('SELECT u.id, u.username, u.is_admin, p.name AS perfil FROM usuario u LEFT JOIN perfil p ON u.perfil_id = p.id;')">
-                select usuários e perfis
+              <button type="button" class="btn-pill" onclick="window.TCCApp.setQuery('SELECT city, COUNT(*) AS total FROM employee GROUP BY city ORDER BY total DESC;')">
+                select employee por cidade
               </button>
               <button type="button" class="btn-pill" onclick="window.TCCApp.setQuery('SELECT e.education, e.city, e.payment_tier, e.age FROM employee e WHERE e.age > 25 LIMIT 10;')">
                 select employee (idade &gt; 25)
@@ -202,7 +202,7 @@
               <span class="editor-lang">SQL (Read-Only)</span>
               <span class="editor-hint">Dica: Pressione <strong>Ctrl + Enter</strong> para executar</span>
             </div>
-            <textarea id="sql-input" class="sql-textarea" rows="5" spellcheck="false" placeholder="Digite seu comando SQL aqui... (ex: SELECT p.name FROM perfil p)">SELECT p.name FROM perfil p;</textarea>
+            <textarea id="sql-input" class="sql-textarea" rows="5" spellcheck="false" placeholder="Digite seu comando SQL aqui... (ex: SELECT * FROM employee LIMIT 10)">SELECT * FROM employee LIMIT 10;</textarea>
           </div>
 
           <!-- Actions Bar -->

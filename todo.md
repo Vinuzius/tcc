@@ -10,19 +10,19 @@ Ordenado por prioridade dentro de cada categoria.
    - Definir unicidade e múltiplas regras por conjunto em `profile_rule`.
    - Manter ou remover `algorithm.created_by_id` (só será usado quando houver cadastro de algoritmos).
    - `profile.regulation_id NOT NULL` fica para depois (ver v1+).
-2. [ ] **Alinhar o código ao schema Arani** — pré-requisito dos itens 3 e 4
+2. [X] **Alinhar o código ao schema Arani** — pré-requisito dos itens 3 e 4
    - Criar o schema a partir do `schema.sql`.
    - Usuários e perfis somente no PostgreSQL, sem fallback SQLite.
    - Renomear `perfil`/`usuario` para `profile`/`app_user` (nomes em inglês).
-3. [ ] **Separar as conexões**
+3. [X] **Separar as conexões**
    - Arani: leitura e escrita.
    - Fonte de dados (`employee`): somente leitura, papel com `SELECT` só nas tabelas de consulta.
    - O `/api/query` nunca alcança o Arani (isso também fecha a leitura de `password_hash` por consulta).
    - Executar as consultas dos usuários numa transação `READ ONLY` (isso também barra `WITH ... DELETE`).
-4. [ ] **Integrar a `PrivacyEngine` ao `/api/query`**
+4. [X] **Integrar a `PrivacyEngine` ao `/api/query`**
    - Buscar as regras do perfil do usuário no Arani, aplicar no resultado e devolver só o transformado.
    - Ponto de partida: `privacy_engine.py` (UPPER, MASK, SUPPRESS, HIDE_COLUMN).
-5. [ ] **Seed mínimo no schema final** — perfis A e B, `UPPER` em `city`, `HIDE_COLUMN` em `education` — para demonstrar o fluxo de ponta a ponta (ponto de partida: `seed_example.sql`).
+5. [X] **Seed mínimo no schema final** — perfis A e B, `UPPER` em `city`, `HIDE_COLUMN` em `education` — para demonstrar o fluxo de ponta a ponta (ponto de partida: `seed_example.sql`).
 
 ---
 

@@ -74,6 +74,8 @@ class PrivacyEngine:
         for rule in rules:
             by_column.setdefault(rule["column_name"].lower(), []).append(rule)
 
+        # TODO: limitação conhecida — a engine casa as regras pelo nome da coluna do resultado,
+        # então aliases como `SELECT city AS c FROM employee` não aplicam a regra.
         # só as colunas presentes no resultado
         active = {col: by_column[col.lower()] for col in rows[0] if col.lower() in by_column}
         applied = [r for rs in active.values() for r in rs]

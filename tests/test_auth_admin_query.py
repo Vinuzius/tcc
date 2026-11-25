@@ -11,8 +11,8 @@ client = TestClient(app)
 def reset_database_state():
     init_database()
     # Ensure joao has default profile
-    p_rows = execute_mutation(
-        "UPDATE usuario SET perfil_id = (SELECT id FROM perfil WHERE name = 'Padrão' LIMIT 1) WHERE username = 'joao'"
+    execute_mutation(
+        "UPDATE app_user SET profile_id = (SELECT id FROM profile WHERE name = 'Padrão' LIMIT 1) WHERE username = 'joao'"
     )
     yield
 
@@ -138,7 +138,8 @@ def test_admin_can_list_users_and_profiles():
     names = [p["name"] for p in profiles]
     assert "Administrador" in names
     assert "Padrão" in names
-    assert "Pesquisador" in names
+    assert "A" in names
+    assert "B" in names
 
 
 def test_admin_can_modify_user_profile():
@@ -155,14 +156,14 @@ def test_admin_can_modify_user_profile():
     )
     joao = next(u for u in users_resp.json() if u["username"] == "joao")
 
-    # Update joao's profile to Pesquisador
+    # Update joao's profile to A
     patch_resp = client.patch(
         f"/api/admin/users/{joao['id']}/profile",
         headers={"Authorization": f"Bearer {admin_token}"},
-        json={"perfil_name": "Pesquisador"},
+        json={"perfil_name": "A"},
     )
     assert patch_resp.status_code == 200
-    assert patch_resp.json()["perfil_name"] == "Pesquisador"
+    assert patch_resp.json()["perfil_name"] == "A"
 
     # Verify update persisted
     verify_resp = client.get(
@@ -170,33 +171,84 @@ def test_admin_can_modify_user_profile():
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     joao_updated = next(u for u in verify_resp.json() if u["username"] == "joao")
-    assert joao_updated["perfil_name"] == "Pesquisador"
+    assert joao_updated["perfil_name"] == "A"
 
 
 def test_query_runner_endpoint():
-    login_resp = client.post(
+    # Admin sees original data
+    admin_login = client.post(
         "/api/auth/login",
         json={"username": "admin", "password": "admin123"},
     )
-    token = login_resp.json()["access_token"]
+    admin_token = admin_login.json()["access_token"]
 
-    # Run query
-    query_resp = client.post(
+    admin_resp = client.post(
         "/api/query",
-        headers={"Authorization": f"Bearer {token}"},
-        json={"sql": "SELECT p.name FROM perfil p ORDER BY p.name"},
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={"sql": "SELECT * FROM employee LIMIT 3"},
     )
-    assert query_resp.status_code == 200
-    res = query_resp.json()
-    assert "name" in res["columns"]
-    assert res["row_count"] >= 6
-    assert any(r["name"] == "Administrador" for r in res["rows"])
+    assert admin_resp.status_code == 200
+    admin_res = admin_resp.json()
+    assert "education" in admin_res["columns"]
+    assert "city" in admin_res["columns"]
+    assert admin_res["row_count"] == 3
+
+    # user_a: city in UPPERCASE
+    a_login = client.post(
+        "/api/auth/login",
+        json={"username": "user_a", "password": "usera123"},
+    )
+    a_token = a_login.json()["access_token"]
+    a_resp = client.post(
+        "/api/query",
+        headers={"Authorization": f"Bearer {a_token}"},
+        json={"sql": "SELECT * FROM employee LIMIT 3"},
+    )
+    assert a_resp.status_code == 200
+    a_res = a_resp.json()
+    assert "education" in a_res["columns"]
+    assert all(r["city"] == r["city"].upper() for r in a_res["rows"] if r["city"])
+
+    # user_b: education column hidden
+    b_login = client.post(
+        "/api/auth/login",
+        json={"username": "user_b", "password": "userb123"},
+    )
+    b_token = b_login.json()["access_token"]
+    b_resp = client.post(
+        "/api/query",
+        headers={"Authorization": f"Bearer {b_token}"},
+        json={"sql": "SELECT * FROM employee LIMIT 3"},
+    )
+    assert b_resp.status_code == 200
+    b_res = b_resp.json()
+    assert "education" not in b_res["columns"]
+    assert all("education" not in r for r in b_res["rows"])
+
+    # Source isolation: app_user and arani.app_user fail
+    assert client.post(
+        "/api/query",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={"sql": "SELECT * FROM app_user"},
+    ).status_code == 400
+    assert client.post(
+        "/api/query",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={"sql": "SELECT * FROM arani.app_user"},
+    ).status_code == 400
+
+    # Read-only enforcement: CTE with DELETE fails
+    assert client.post(
+        "/api/query",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={"sql": "WITH d AS (DELETE FROM employee RETURNING *) SELECT * FROM d"},
+    ).status_code == 400
 
     # Reject non-read query
     invalid_resp = client.post(
         "/api/query",
-        headers={"Authorization": f"Bearer {token}"},
-        json={"sql": "DELETE FROM usuario WHERE id = 1"},
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={"sql": "DELETE FROM employee WHERE id = 1"},
     )
     assert invalid_resp.status_code == 400
 

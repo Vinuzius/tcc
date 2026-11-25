@@ -11,7 +11,7 @@ from app.security import (
     hash_password,
     verify_password,
 )
-from database.db import execute_mutation, execute_query, get_db_mode
+from database.db import execute_mutation, execute_query
 
 router = APIRouter(prefix="/api/auth", tags=["Autenticação (OAuth 2.0)"])
 
@@ -33,37 +33,42 @@ class OAuthLoginRequest(BaseModel):
 
 
 def get_user_by_username(username: str) -> dict[str, Any] | None:
-    mode = get_db_mode()
-    ph = "%s" if mode == "postgres" else "?"
-    query = f"""
+    query = """
         SELECT 
             u.id, 
             u.username, 
             u.password_hash, 
             u.is_admin, 
-            u.perfil_id,
-            p.name as perfil_name,
-            p.description as perfil_description
-        FROM usuario u
-        LEFT JOIN perfil p ON u.perfil_id = p.id
-        WHERE u.username = {ph}
+            u.profile_id,
+            p.name AS profile_name,
+            p.description AS profile_description
+        FROM app_user u
+        LEFT JOIN profile p ON u.profile_id = p.id
+        WHERE u.username = %s
         LIMIT 1
     """
     users = execute_query(query, (username,))
     if not users:
         return None
     user = users[0]
-    user["is_admin"] = bool(user.get("is_admin"))
-    return user
+    return {
+        "id": user["id"],
+        "username": user["username"],
+        "password_hash": user["password_hash"],
+        "is_admin": bool(user.get("is_admin")),
+        "profile_id": user["profile_id"],
+        "profile_name": user["profile_name"],
+        "profile_description": user["profile_description"],
+    }
 
 
 def get_default_profile_id() -> int | None:
     """Find default profile id ('Padrão' or the first available non-admin profile)."""
-    profiles = execute_query("SELECT id FROM perfil WHERE name = 'Padrão' LIMIT 1")
+    profiles = execute_query("SELECT id FROM profile WHERE name = 'Padrão' LIMIT 1")
     if profiles:
         return profiles[0]["id"]
     # Fallback to any profile
-    profiles = execute_query("SELECT id FROM perfil ORDER BY id ASC LIMIT 1")
+    profiles = execute_query("SELECT id FROM profile ORDER BY id ASC LIMIT 1")
     return profiles[0]["id"] if profiles else None
 
 
@@ -85,8 +90,8 @@ def oauth_token(form_data: OAuth2PasswordRequestForm = Depends()) -> dict[str, A
         "sub": str(user["id"]),
         "username": user["username"],
         "is_admin": user["is_admin"],
-        "perfil_id": user["perfil_id"],
-        "perfil_name": user["perfil_name"],
+        "profile_id": user["profile_id"],
+        "profile_name": user["profile_name"],
     })
 
     return {
@@ -113,8 +118,8 @@ def login_json(payload: LoginRequest) -> dict[str, Any]:
         "sub": str(user["id"]),
         "username": user["username"],
         "is_admin": user["is_admin"],
-        "perfil_id": user["perfil_id"],
-        "perfil_name": user["perfil_name"],
+        "profile_id": user["profile_id"],
+        "profile_name": user["profile_name"],
     })
 
     return {
@@ -126,9 +131,9 @@ def login_json(payload: LoginRequest) -> dict[str, Any]:
             "username": user["username"],
             "is_admin": user["is_admin"],
             "perfil": {
-                "id": user["perfil_id"],
-                "name": user["perfil_name"],
-                "description": user["perfil_description"],
+                "id": user["profile_id"],
+                "name": user["profile_name"],
+                "description": user["profile_description"],
             },
         },
     }
@@ -156,14 +161,11 @@ def register(payload: RegisterRequest) -> dict[str, Any]:
     default_profile_id = get_default_profile_id()
     pwd_hash = hash_password(payload.password)
 
-    mode = get_db_mode()
-    ph = "%s" if mode == "postgres" else "?"
-    insert_sql = f"""
-        INSERT INTO usuario (username, password_hash, is_admin, perfil_id)
-        VALUES ({ph}, {ph}, {ph}, {ph})
+    insert_sql = """
+        INSERT INTO app_user (username, password_hash, is_admin, profile_id)
+        VALUES (%s, %s, %s, %s)
     """
-    admin_val = False if mode == "postgres" else 0
-    execute_mutation(insert_sql, (payload.username, pwd_hash, admin_val, default_profile_id))
+    execute_mutation(insert_sql, (payload.username, pwd_hash, False, default_profile_id))
 
     new_user = get_user_by_username(payload.username)
     if not new_user:
@@ -173,8 +175,8 @@ def register(payload: RegisterRequest) -> dict[str, Any]:
         "sub": str(new_user["id"]),
         "username": new_user["username"],
         "is_admin": new_user["is_admin"],
-        "perfil_id": new_user["perfil_id"],
-        "perfil_name": new_user["perfil_name"],
+        "profile_id": new_user["profile_id"],
+        "profile_name": new_user["profile_name"],
     })
 
     return {
@@ -186,9 +188,9 @@ def register(payload: RegisterRequest) -> dict[str, Any]:
             "username": new_user["username"],
             "is_admin": new_user["is_admin"],
             "perfil": {
-                "id": new_user["perfil_id"],
-                "name": new_user["perfil_name"],
-                "description": new_user["perfil_description"],
+                "id": new_user["profile_id"],
+                "name": new_user["profile_name"],
+                "description": new_user["profile_description"],
             },
         },
     }
@@ -205,9 +207,9 @@ def get_me(current_user: dict[str, Any] = Depends(get_current_user)) -> dict[str
         "username": current_user["username"],
         "is_admin": current_user["is_admin"],
         "perfil": {
-            "id": current_user["perfil_id"],
-            "name": current_user["perfil_name"],
-            "description": current_user["perfil_description"],
+            "id": current_user["profile_id"],
+            "name": current_user["profile_name"],
+            "description": current_user["profile_description"],
         },
     }
 
@@ -258,11 +260,9 @@ def oauth_login(payload: OAuthLoginRequest) -> dict[str, Any]:
         # Create user via OAuth with default profile
         default_profile_id = get_default_profile_id()
         random_pwd_hash = hash_password(f"oauth_{os.urandom(8).hex()}")
-        mode = get_db_mode()
-        ph = "%s" if mode == "postgres" else "?"
         execute_mutation(
-            f"INSERT INTO usuario (username, password_hash, is_admin, perfil_id) VALUES ({ph}, {ph}, {ph}, {ph})",
-            (base_username, random_pwd_hash, False if mode == "postgres" else 0, default_profile_id),
+            "INSERT INTO app_user (username, password_hash, is_admin, profile_id) VALUES (%s, %s, %s, %s)",
+            (base_username, random_pwd_hash, False, default_profile_id),
         )
         user = get_user_by_username(base_username)
 
@@ -273,8 +273,8 @@ def oauth_login(payload: OAuthLoginRequest) -> dict[str, Any]:
         "sub": str(user["id"]),
         "username": user["username"],
         "is_admin": user["is_admin"],
-        "perfil_id": user["perfil_id"],
-        "perfil_name": user["perfil_name"],
+        "profile_id": user["profile_id"],
+        "profile_name": user["profile_name"],
         "provider": provider,
     })
 
@@ -288,9 +288,9 @@ def oauth_login(payload: OAuthLoginRequest) -> dict[str, Any]:
             "username": user["username"],
             "is_admin": user["is_admin"],
             "perfil": {
-                "id": user["perfil_id"],
-                "name": user["perfil_name"],
-                "description": user["perfil_description"],
+                "id": user["profile_id"],
+                "name": user["profile_name"],
+                "description": user["profile_description"],
             },
         },
     }

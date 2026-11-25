@@ -82,20 +82,14 @@ def get_current_user(token: str | None = Depends(oauth2_scheme)) -> dict[str, An
             u.id, 
             u.username, 
             u.is_admin, 
-            u.perfil_id,
-            p.name as perfil_name,
-            p.description as perfil_description
-        FROM usuario u
-        LEFT JOIN perfil p ON u.perfil_id = p.id
-        WHERE u.id = ? OR u.username = ?
+            u.profile_id,
+            p.name AS profile_name,
+            p.description AS profile_description
+        FROM app_user u
+        LEFT JOIN profile p ON u.profile_id = p.id
+        WHERE u.id = %s OR u.username = %s
         LIMIT 1
     """
-    mode = os.getenv("FORCE_SQLITE", "")
-    # Parameter syntax: ? for sqlite or %s for postgres
-    from database.db import get_db_mode
-    db_mode = get_db_mode()
-    if db_mode == "postgres":
-        query = query.replace("?", "%s")
 
     try:
         user_id_int = int(user_id)
@@ -111,9 +105,14 @@ def get_current_user(token: str | None = Depends(oauth2_scheme)) -> dict[str, An
         )
 
     user = users[0]
-    # Normalize is_admin to boolean
-    user["is_admin"] = bool(user.get("is_admin"))
-    return user
+    return {
+        "id": user["id"],
+        "username": user["username"],
+        "is_admin": bool(user.get("is_admin")),
+        "profile_id": user["profile_id"],
+        "profile_name": user["profile_name"],
+        "profile_description": user["profile_description"],
+    }
 
 
 def get_current_admin(current_user: dict[str, Any] = Depends(get_current_user)) -> dict[str, Any]:

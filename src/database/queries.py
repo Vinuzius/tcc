@@ -1,6 +1,6 @@
 from typing import Any
 
-from database.db import execute_query
+from database.connections import source_query
 
 
 def ensure_read_query(sql: str) -> str:
@@ -24,4 +24,4 @@ def ensure_read_query(sql: str) -> str:
 
 def execute_read_query(sql: str) -> list[dict[str, Any]]:
     statement = ensure_read_query(sql)
-    return execute_query(statement)
+    return source_query(statement)

@@ -32,14 +32,17 @@ Instale as dependências:
 pip install -r requirements\requirements.txt
 ```
 
-## Configuração
+## Configuração e Setup
 
-Copie `.env.example` para `.env` e ajuste os valores do PostgreSQL.
-Use um usuário que exista no PostgreSQL local, por exemplo `postgres`, em
-`POSTGRES_USER`; os valores `your_user`, `your_database` e `your_password` do
-arquivo de exemplo são apenas placeholders. Reinicie o Uvicorn depois de alterar o `.env`, pois as variáveis são
-carregadas na inicialização. A aplicação carrega o `.env` do diretório do
-projeto e dá prioridade a esses valores sobre variáveis antigas do ambiente.
+Siga os passos nesta ordem:
+
+1. **Crie o banco PostgreSQL** (caso não utilize o banco padrão `postgres`).
+2. **Crie o papel somente leitura (`source_reader`)** executando `src/database/source_reader_role.sql` como superusuário (ex.: `postgres`), lembrando de trocar a senha `change_me`:
+   ```powershell
+   psql -h localhost -U postgres -d postgres -f src/database/source_reader_role.sql
+   ```
+3. **Configure o `.env`**: copie `.env.example` para `.env` e ajuste as variáveis `ARANI_DB_*` (conexão de leitura/escrita do Arani) e `SOURCE_DB_*` (conexão somente leitura com o usuário `source_reader` e a mesma senha definida no passo anterior).
+4. **Suba a API** (ao iniciar, a aplicação cria o schema `arani`, aplica o seed dos perfis A e B, cria a tabela `public.employee`, concede `SELECT` ao `source_reader` e cadastra os usuários de teste). Reinicie o Uvicorn sempre que alterar o `.env`.
 
 ## Executar a API
 
@@ -55,31 +58,45 @@ No Linux ou macOS:
 uvicorn main:app --reload --app-dir src
 ```
 
-## Exemplo do endpoint
+## Exemplos de uso: Perfis A e B (PrivacyEngine)
 
-`POST /first-example/query`
+Todas as consultas passam pela rota autenticada `POST /api/query` e pela `PrivacyEngine`:
 
-Headers:
+- **Perfil A (`user_a`)**: aplica `UPPER` na coluna `city`.
+- **Perfil B (`user_b`)**: aplica `HIDE_COLUMN` na coluna `education` (remove a coluna do resultado).
 
-```http
-X-Profile-Name: A
-Content-Type: application/json
+### Perfil A (`user_a`) vs Perfil B (`user_b`) lado a lado
+
+**Perfil A (`user_a`):**
+```bash
+TOKEN_A=$(curl -s -X POST http://localhost:8000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"user_a","password":"usera123"}' | python -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+
+curl -s -X POST http://localhost:8000/api/query \
+  -H "Authorization: Bearer $TOKEN_A" \
+  -H "Content-Type: application/json" \
+  -d '{"sql":"SELECT * FROM employee LIMIT 3"}'
+# Resultado: city em MAIÚSCULAS (ex.: "BANGALORE"), demais colunas originais.
 ```
 
-Body:
+**Perfil B (`user_b`):**
+```bash
+TOKEN_B=$(curl -s -X POST http://localhost:8000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"user_b","password":"userb123"}' | python -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
 
-```json
-{
-  "sql": "SELECT e.education, e.city, e.payment_tier FROM employee e WHERE e.age > 20 AND e.ever_benched = 'No'"
-}
+curl -s -X POST http://localhost:8000/api/query \
+  -H "Authorization: Bearer $TOKEN_B" \
+  -H "Content-Type: application/json" \
+  -d '{"sql":"SELECT * FROM employee LIMIT 3"}'
+# Resultado: coluna "education" removida de columns e rows; city com valor original.
 ```
 
 Limitações do comportamento:
 
-- Apenas consultas read-only são aceitas.
-- O SQL deve começar com `SELECT` ou `WITH`.
-- O endpoint rejeita `INSERT`, `UPDATE`, `DELETE`, `ALTER`, `DROP` e outras mutações.
-- O retorno é transformado pelo perfil informado no header.
+- Apenas consultas read-only são aceitas (`SELECT` ou `WITH`).
+- As consultas executam em transação `READ ONLY` com o papel `source_reader` sem acesso ao schema `arani`.
 
 ## Servidor PostgreSQL wire
 
@@ -155,13 +172,16 @@ http://localhost:8000
    - Exibição dinâmica dos dados retornados em tabela HTML responsiva.
    - Métricas de execução (número de linhas, colunas e tempo em milissegundos).
    - Filtro de resultados em tempo real e exportação para CSV.
-   - Exemplos rápidos de consulta prontos para teste (`SELECT p.name FROM perfil`, `SELECT * FROM usuario`, `SELECT * FROM employee LIMIT 10`).
+   - Exemplos rápidos de consulta prontos para teste (`SELECT * FROM employee LIMIT 10`, `SELECT city, COUNT(*) AS total FROM employee GROUP BY city ORDER BY total DESC`).
 
-### Credenciais Padrão para Teste:
+### Usuários de Teste Padrão:
 
-- **Administrador**: `admin` / `admin123` (Perfil: *Administrador*)
-- **Usuário Comum**: `joao` / `user123` (Perfil: *Padrão*)
-- **Pesquisador**: `maria` / `maria123` (Perfil: *Pesquisador*)
+| Usuário | Senha | Perfil | Comportamento na `PrivacyEngine` |
+| --- | --- | --- | --- |
+| `admin` | `admin123` | `Administrador` | Acesso administrativo; sem regras de anonimização |
+| `user_a` | `usera123` | `A` | `city` sempre em MAIÚSCULAS (`UPPER`) |
+| `user_b` | `userb123` | `B` | Coluna `education` ocultada (`HIDE_COLUMN`) |
+| `joao` | `user123` | `Padrão` | Perfil padrão de novos usuários; sem regras |
 
 ## Health check
 

@@ -8,7 +8,6 @@ from fastapi.staticfiles import StaticFiles
 
 from app.routers.admin import router as admin_router
 from app.routers.auth import router as auth_router
-from app.routers.first_example import router as first_example_router
 from app.routers.health import router as health_router
 from app.routers.profiles import router as profiles_router
 from app.routers.query import router as query_router
@@ -46,7 +45,6 @@ app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(profiles_router)
 app.include_router(query_router)
-app.include_router(first_example_router)
 app.include_router(health_router)
 
 # Mount frontend directory for static assets and HTML UI
