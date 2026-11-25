@@ -6,7 +6,7 @@ Ordenado por prioridade dentro de cada categoria.
 
 ## 1. Urgente — necessário para o MVP da tese
 
-1. [ ] **Congelar o schema v1**
+1. [X] **Congelar o schema v1**
    - Definir unicidade e múltiplas regras por conjunto em `profile_rule`.
    - Manter ou remover `algorithm.created_by_id` (só será usado quando houver cadastro de algoritmos).
    - `profile.regulation_id NOT NULL` fica para depois (ver v1+).
@@ -28,21 +28,21 @@ Ordenado por prioridade dentro de cada categoria.
 
 ## 2. Entrega inicial (v0)
 
-1. [ ] **Rastrear a origem das colunas com `sqlglot`**
+1. [X] **Rastrear a origem das colunas com `sqlglot`**
    - Resolver aliases, expressões, subconsultas, `SELECT *` e joins.
    - Rejeitar consultas que a engine não consegue analisar (na dúvida, nega).
    - Adicionar `sqlglot` ao `requirements.txt`.
-2. [ ] **Cobertura obrigatória e revalidação**
+2. [X] **Cobertura obrigatória e revalidação**
    - Coluna classificada e sem regra não sai crua (oculta ou bloqueia); "sem regra = original" só vale para coluna sem classificação ou `NON_IDENTIFIER`.
    - Conferir na execução se a regra ainda satisfaz a classificação atual.
-3. [ ] **Validação de SQL**: `statement_timeout` e limite de linhas. A transação `READ ONLY` (que também barra `WITH` que altera dados) já entra no item 3 do Urgente.
+3. [X] **Validação de SQL**: `statement_timeout` e limite de linhas. A transação `READ ONLY` (que também barra `WITH` que altera dados) já entra no item 3 do Urgente.
 4. [ ] **Interface de algoritmos por conjunto de colunas** + registro de algoritmos pré-definidos.
 5. [ ] **Regulações e perfis de exemplo**
    - Preencher regulações e `classification_guarantee` (a regulação é atualizada manualmente por enquanto).
    - Cadastrar **no mínimo 5 perfis** com classificações próprias e regras (ex.: jornalista trata `[city, gender]` como `QUASI_IDENTIFIER`, detetive da polícia não).
 6. [ ] **K-anonimato (com verificação do resultado) e Laplace**.
 7. [ ] **Orçamento de privacidade (epsilon) por usuário**, para o Laplace.
-8. [ ] **Erro claro quando nenhuma coluna permitida** — hoje devolve linhas vazias.
+8. [X] **Erro claro quando nenhuma coluna permitida** — hoje devolve linhas vazias.
 9. [ ] **Validação de `params`**: preenchidos junto do algoritmo base; exceção se faltando ou inválido.
 10. [ ] **Sincronizar o catálogo** (`data_table`/`data_column`) quando um `data_source` for inserido ou atualizado.
 11. [ ] **Ligar o `postgres_wire_server` à engine**, para o usuário conectar no "banco que ele conhece".

@@ -429,3 +429,15 @@ def test_query_max_rows_truncation(monkeypatch):
     data = resp.json()
     assert data["row_count"] == 10
     assert data["truncated"] is True
+
+
+def test_query_without_profile_returns_403():
+    execute_mutation("UPDATE app_user SET profile_id = NULL WHERE username = 'joao'")
+    token_joao = _login("joao", "user123")
+    resp = client.post(
+        "/api/query",
+        headers={"Authorization": f"Bearer {token_joao}"},
+        json={"sql": "SELECT * FROM employee LIMIT 1"},
+    )
+    assert resp.status_code == 403
+    assert "Usuário sem perfil atribuído" in resp.json()["detail"]

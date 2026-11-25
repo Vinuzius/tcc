@@ -18,7 +18,10 @@ SCHEMA = {
 
 
 def _make_engine() -> PrivacyEngine:
-    return PrivacyEngine(arani_query=lambda sql, params=None: [], source_query=lambda sql: [])
+    return PrivacyEngine(
+        arani_query=lambda sql, params=None: [],
+        source_query=lambda sql, max_rows=None: [],
+    )
 
 
 def test_analyze_query_alias_expression_and_function() -> None:
@@ -113,3 +116,17 @@ def test_apply_rules_raises_permission_error_when_no_columns_remain() -> None:
     }
     with pytest.raises(PermissionError, match="Nenhuma coluna permitida"):
         engine.apply_rules([], lineage_map, rules, set())
+
+
+def test_execute_rejects_user_without_profile() -> None:
+    called = False
+
+    def fail_if_called(sql: str, max_rows: int | None = None):
+        nonlocal called
+        called = True
+        return []
+
+    engine = PrivacyEngine(arani_query=lambda sql, params=None: [], source_query=fail_if_called)
+    with pytest.raises(PermissionError, match="Usuário sem perfil atribuído"):
+        engine.execute({"id": 1, "profile_id": None}, "SELECT city FROM employee")
+    assert called is False

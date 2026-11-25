@@ -294,24 +294,20 @@ class PrivacyEngine:
 
     # ---------- fluxo principal ----------
     def execute(self, user: dict[str, Any], sql: str) -> dict[str, Any]:
+        if not user.get("profile_id"):
+            raise PermissionError("Usuário sem perfil atribuído")
+
         statement = ensure_read_query(sql)
         column_lineage = self.analyze_query(statement)
 
         max_rows = get_query_max_rows()
-        try:
-            rows = self.source_query(statement, max_rows=max_rows + 1)
-        except TypeError:
-            rows = self.source_query(statement)
+        rows = self.source_query(statement, max_rows=max_rows + 1)
 
         truncated = len(rows) > max_rows
         if truncated:
             rows = rows[:max_rows]
 
-        if user.get("profile_id"):
-            rules_by_column, classified_columns = self.get_policy(user["profile_id"])
-        else:
-            rules_by_column, classified_columns = {}, set()
-
+        rules_by_column, classified_columns = self.get_policy(user["profile_id"])
         rows, applied, columns = self.apply_rules(
             rows, column_lineage, rules_by_column, classified_columns
         )
