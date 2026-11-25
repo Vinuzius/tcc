@@ -20,9 +20,11 @@ Dois bancos, sempre separados:
 - Agrupar lógica relacionada em uma classe ou módulo existente; não criar classes pequenas usadas em um único lugar.
 - Schema: editar `src/database/arani_schema.sql` (idempotente; PK, UNIQUE, CHECK e FK no final de cada tabela) e validar executando o arquivo duas vezes seguidas.
 
-## Comandos (confirmar e ajustar)
-- Testes: `pytest`
+## Comandos (PowerShell, com o venv ativo)
+- Testes: `$env:PYTHONPATH='src'; python -m pytest`
 - Subir a API: `uvicorn main:app --reload --app-dir src`
+- Subir o servidor wire PostgreSQL (outro terminal; lê `POSTGRES_WIRE_PORT`, `POSTGRES_WIRE_USER` e `POSTGRES_WIRE_PASSWORD` do `.env`): `python src\postgres_wire_server.py`
+- Testar o servidor wire: `psql -h localhost -p 5433 -U postgres -d postgres`
 
 ## Escopo
 - Não implementar nada fora do pedido da tarefa. As prioridades estão em `todo.md` (urgente, v0, v1+).
@@ -30,3 +32,11 @@ Dois bancos, sempre separados:
 
 ## Ao terminar uma tarefa
 Listar os arquivos alterados, as suposições feitas e o estado dos testes.
+
+## Limitações conhecidas
+- O servidor wire ainda NÃO passa pela `PrivacyEngine` (devolve dados sem aplicar regras). Não expor a porta fora da máquina local até essa integração.
+
+## Versões e documentação
+- `src/database/arani_schema.sql` é sempre a versão atual do schema.
+- `docs/versions/` guarda cópias congeladas (snapshots) do schema e dos documentos principais, mais um `CHANGELOG.md`.
+- Não editar snapshots existentes nem criar novos sem o pedido do usuário. Ao alterar o schema, avisar que uma nova versão pode precisar de snapshot.
